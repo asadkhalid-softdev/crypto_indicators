@@ -1,0 +1,10 @@
+{
+    "test":{
+        "api_key":"enter key here",
+        "api_secret":"enter secret here"
+    },
+    "live":{
+        "api_key":"enter key here",
+        "api_secret":"enter secret here"
+    }
+}
