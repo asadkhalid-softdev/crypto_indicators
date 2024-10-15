@@ -17,10 +17,6 @@ Based on these indicators, you can filter out the cryptos based on whether a cry
 5. Bearish Candle Scores
 6. Uptrending or downtrending MACD/Signal/MACD-Signal-Change
 
-All filters are available in the API documentation below for testing:
-
-[API DOCUMENTATION](https://documenter.getpostman.com/view/12104204/2sAXxTcAsi)
-
 ## STEP 1:
 Install the requirements `pip install -r requirements.txt`
 
@@ -32,6 +28,9 @@ Run `python main.py`
 
 ## STEP 4:
 Use the API documentation to load the APIs to postman for testing.
+
+All filters are available in the API documentation below for testing:
+[API DOCUMENTATION](https://documenter.getpostman.com/view/12104204/2sAXxTcAsi)
 
 ## OPTIONS:
 
