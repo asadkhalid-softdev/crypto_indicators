@@ -17,6 +17,8 @@ Based on these indicators, you can filter out the cryptos based on whether a cry
 5. Bearish Candle Scores
 6. Uptrending or downtrending MACD/Signal/MACD-Signal-Change
 
+Currently only **1h** and **12h** intervals are being used. More intervals can be added by editing **default_configs** in the *main.py* file.
+
 ## STEP 1:
 Install the requirements `pip install -r requirements.txt`
 

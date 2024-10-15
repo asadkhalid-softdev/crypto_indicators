@@ -428,8 +428,9 @@ def fetch_indicators():
 
 if __name__ == '__main__':
     try:
-        # global params
-        params = {}
+        params = {} # global params
+        params['thread_fetchie_status'] = False # initialize fetch all
+        symbol_threads = {} # initialize symbol_threads
 
         # define configuration which will be used to fetch data and generate indicators
         default_configs = {
@@ -491,12 +492,6 @@ if __name__ == '__main__':
         keys = json.load(open(f"{current_directory}/keys.json","rb"))
         api_type = 'live'
         binance_rest_api = binance_api(api_type, keys[api_type])
-
-        # initialize fetch all
-        params['thread_fetchie_status'] = False
-
-        # initialize symbol_threads
-        symbol_threads = {}
 
         # start app
         app.run(debug=True, use_reloader=False)
