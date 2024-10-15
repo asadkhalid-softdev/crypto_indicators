@@ -140,6 +140,7 @@ class binance_fetch_promising(threading.Thread):
         self.symbols_info = []
         self.skip_unavailable = True
         self.ignore_symbols = ["EURUSDT", "EURIUSDT", "AEURUSDT"]
+        self.macd_indicator = pd.DataFrame()
 
         if os.path.exists("df_indicator_promising.csv"):
             self.indicator_info = pd.read_csv("df_indicator_promising.csv")
@@ -227,6 +228,8 @@ class binance_fetch_promising(threading.Thread):
 
                 # extract indicators for the symbol, get buys and sell times
                 indicator = local_thread.combined_indicators
+                if indicator.empty:
+                    raise Exception(f"Data unavailable for {sym['symbol']}")
 
                 latest_sample = indicator.head(1).to_dict('records')[0]
                 # sym_data['latest_sample'] = latest_sample
@@ -594,6 +597,55 @@ class binance_data(threading.Thread):
                                     configs = self.kline_configs[interval]
                                 )
 
+    def get_trend(self, df):
+
+        def analyze_trend(numbers):
+            # Generate a sequence of indices to pair with the numbers
+
+            indices = list(range(len(numbers)))
+
+            # Perform linear regression
+            slope, intercept, r_value, p_value, std_err = stats.linregress(indices, numbers)
+
+            # Analyze the slope for trend
+            if slope > 0:
+                return "Downtrend"
+            elif slope < 0:
+                return "Uptrend"
+            else:
+                return "No clear trend"
+        
+        def apply_trend_analysis(df, column_name, window=5, offset=0):
+            trends = []
+            for i in range(len(df)):
+                # Ensure we have at least 5 subsequent values
+                if i+offset+window <= len(df):
+                    subset = df[column_name].iloc[i+offset:i+offset+window]
+                    trend = analyze_trend(subset)
+                    trends.append(trend)
+                else:
+                    trends.append("Insufficient data")
+            return trends
+        
+        
+        df = df.sort_values('Open time', ascending=False)
+        exclude_features = ['1_candle_pattern', '2_candle_pattern', 'macd_signal_change_direction', 'candle_score', 'middle_bolinger_band', 'upper_bolinger_band', 'lower_bolinger_band', 'breakout_up', 'breakout_down', 'reversal_up', 'reversal_down', 'pullback_up', 'pullback_down', 'Volume']
+        for c in df.columns:
+            if c!="Open time":
+                interval = c.split("_")[-1]
+                feature = "_".join(c.split("_")[0:-1])
+                if feature in exclude_features:
+                    continue
+
+                window_offsets = [3, 0]
+
+                window = window_offsets[0] #* self.kline_configs[interval]["indicator_multiplier"]
+                offset = window_offsets[1] #* self.kline_configs[interval]["indicator_multiplier"]
+                df[f'trend_{feature}_{interval}'] = apply_trend_analysis(df, c, window=window, offset=offset)
+        df = df.sort_values('Open time', ascending=True)
+
+        return df
+    
     def get_klines_data(self, url="/v3/klines",  startTime="1 hour ago", endTime="now", interval="1m", delay=0, configs={}):
         try:
             parameters = {
@@ -631,10 +683,12 @@ class binance_data(threading.Thread):
             if configs['get_volume']:
                 self.kline_configs[interval]['df_volume'] = df_klines[['Open time', 'Volume']]
                 self.kline_configs[interval]['df_volume'].rename(columns={'Volume': f'Volume_{interval}'}, inplace=True)
+                self.kline_configs[interval]['df_volume'] = self.get_trend(self.kline_configs[interval]['df_volume'])
 
             if configs['get_stochastic']:
                 df_stochs = self.get_stochastic(df_klines, interval=interval)
                 self.kline_configs[interval]['df_stochs'] = df_stochs[['Open time', f'stochastic_k_{interval}']]
+                self.kline_configs[interval]['df_stochs'] = self.get_trend(self.kline_configs[interval]['df_stochs'])
 
             if configs['get_rsi']:
                 df_rsi = self.get_rsi(df_klines, interval=interval)
@@ -642,6 +696,7 @@ class binance_data(threading.Thread):
                                                                 f'rsi_{interval}', 
                                                                 f'stochastic_rsi_k_{interval}'
                                                                 ]]
+                self.kline_configs[interval]['df_rsi'] = self.get_trend(self.kline_configs[interval]['df_rsi'])
 
             if configs['get_bollinger']:
                 df_bollinger = self.get_bollinger(df_klines, interval=interval)
@@ -651,6 +706,7 @@ class binance_data(threading.Thread):
                                                                             f'reversal_up_{interval}', f'reversal_down_{interval}',
                                                                             f'pullback_up_{interval}', f'pullback_down_{interval}'
                                                                             ]]
+                self.kline_configs[interval]['df_bollinger'] = self.get_trend(self.kline_configs[interval]['df_bollinger'])
 
             if configs['get_macd']:
                 df_macd = self.get_macd(df_klines, interval=interval)
@@ -658,6 +714,7 @@ class binance_data(threading.Thread):
                                                                             f'signal_line_{interval}', f'macd_signal_change_intensity_{interval}',
                                                                             f'macd_signal_change_direction_{interval}'
                                                                             ]]
+                self.kline_configs[interval]['df_macd'] = self.get_trend(self.kline_configs[interval]['df_macd'])
             
             if configs['get_score']:
                 df_score = df_klines.copy()
@@ -675,6 +732,7 @@ class binance_data(threading.Thread):
                                     ]]
 
                 self.kline_configs[interval]['df_score'] = self.get_score(df_score, interval=interval)    
+                self.kline_configs[interval]['df_score'] = self.get_trend(self.kline_configs[interval]['df_score'])
 
             if delay > 0:
                 time.sleep(delay)
@@ -879,21 +937,6 @@ class binance_data(threading.Thread):
 
             self.combined_indicators = reduce(lambda left, right: pd.merge(left, right, on='Open time', how='left'), dataframes)
             self.combined_indicators = self.combined_indicators.ffill().bfill()
-
-            # develop trend features
-            exclude_features = ['1_candle_pattern', '2_candle_pattern','macd_signal_change_direction', 'candle_score', 'middle_bolinger_band', 'upper_bolinger_band', 'lower_bolinger_band', 'breakout_up', 'breakout_down', 'reversal_up', 'reversal_down', 'pullback_up', 'pullback_down', 'Volume']
-            for c in self.combined_indicators.columns:
-                if c!="Open time":
-                    interval = c.split("_")[-1]
-                    feature = "_".join(c.split("_")[0:-1])
-                    if feature in exclude_features:
-                        continue
-
-                    window_offsets = [3, 0]
-
-                    window = window_offsets[0] * self.kline_configs[interval]["indicator_multiplier"]
-                    offset = window_offsets[1] * self.kline_configs[interval]["indicator_multiplier"]
-                    self.combined_indicators[f'trend_{feature}_{interval}'] = apply_trend_analysis(self.combined_indicators, c, window=window, offset=offset)
 
             if delay>0:
                 time.sleep(delay)
