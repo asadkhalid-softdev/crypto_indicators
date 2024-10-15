@@ -35,7 +35,7 @@ All filters are available in the API documentation below for testing:
 ## OPTIONS:
 
 1. **Individual Analysis:**
-You can analyze single or myltiple symbols by choice.
+You can analyze single or multiple symbols by choice.
 
 2. **Fetch Desired Cryptos:**
 You can run a fetcher which gather data for all symbols on binance, prepares their indicators which can then be used to filter out desired symbols.
