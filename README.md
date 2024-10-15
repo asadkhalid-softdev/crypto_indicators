@@ -1,5 +1,5 @@
 # Binance Data Analyser
-This bot fetches data for all cyrptos on Binance and generates set of indicators.
+This bot fetches data for all cyrptos on Binance and generates sets of indicators.
 
 1. Bollinger Bands
 2. RSI + Stochastic RSI
@@ -16,3 +16,5 @@ Based on these indicators, you can filter out the cryptos based on whether a cry
 6. Uptrending or downtrending MACD/Signal/MACD-Signal-Change
 
 All filters are available in the API documentation below for testing:
+
+[API DOCUMENTATION](https://documenter.getpostman.com/view/12104204/2sAXxTcAsi)
