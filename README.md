@@ -1,12 +1,12 @@
-# Binance Data Analyser
+# KUCOIN Data Analyser
 
 ## Overview
-This bot fetches data for all cyrptos on Binance and generates sets of indicators.
+This bot fetches data for all cyrptos on Binance and can generates sets of indicators as follows:
 
 1. Bollinger Bands
 2. RSI + Stochastic RSI
 3. MACD
-4. Candlesticks
+4. Candlestick analysis
 
 Based on these indicators, you can filter out the cryptos based on whether a crypto shows:
 
@@ -17,13 +17,14 @@ Based on these indicators, you can filter out the cryptos based on whether a cry
 5. Bearish Candle Scores
 6. Uptrending or downtrending MACD/Signal/MACD-Signal-Change
 
-Currently only **1h** and **12h** intervals are being used. More intervals can be added by editing **default_configs** in the *main.py* file.
+Currently **1hour**, **1day** and **1week** intervals are being used. More intervals can be added by editing **default_configs** in the *main.py* file.
 
 ## STEP 1:
 Install the requirements `pip install -r requirements.txt`
 
 ## STEP 2:
-Rename the **keys_bkp.json** to **keys.json**. Update the keys inside, obtained from binance. [Binance API Keys](https://www.binance.com/en/support/faq/how-to-create-api-keys-on-binance-360002502072)
+Rename the **keys_bkp.json** to **keys.json**. Update the keys inside, obtained from binance. 
+[KUCOIN API Keys](https://www.kucoin.com/support/360015102174)
 
 ## STEP 3:
 Run `python main.py`
@@ -36,8 +37,5 @@ All filters are available in the API documentation below for testing:
 
 ## OPTIONS:
 
-1. **Individual Analysis:**
-You can analyze single or multiple symbols by choice.
-
-2. **Fetch Desired Cryptos:**
-You can run a fetcher which gather data for all symbols on binance, prepares their indicators which can then be used to filter out desired symbols.
+**Fetch Desired Cryptos:**
+You can run a fetcher which gather data for all symbols on kucoin, prepares their indicators which can then be used to filter out desired symbols.
