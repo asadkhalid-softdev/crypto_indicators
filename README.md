@@ -33,7 +33,7 @@ Run `python main.py`
 Use the API documentation to load the APIs to postman for testing.
 
 All filters are available in the API documentation below for testing:
-[API DOCUMENTATION](https://documenter.getpostman.com/view/12104204/2sAXxTcAsi)
+[API DOCUMENTATION](https://documenter.getpostman.com/view/25081135/2sAYBVgBZu)
 
 ## OPTIONS:
 
