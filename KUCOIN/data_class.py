@@ -535,6 +535,19 @@ class kucoin_fetch_promising(threading.Thread):
         sym_data[f'latest_volume_{inter}'] = latest_sample[f'Volume_{inter}']
         sym_data[f'latest_candle_diff_{inter}'] = latest_sample[f'candle_diff_{inter}']
 
+        #region candle
+        # find candlestick positive
+        is_candle_positive = indicator[(indicator[f'candle_diff_{inter}'] > 0)]
+        is_candle_positive = is_candle_positive[(is_candle_positive['Open time'] >= how_much_ago)]
+        is_candle_positive['Open time'] = is_candle_positive['Open time'].astype(str)
+        if not is_candle_positive.empty:
+            sym_data[f"is_candle_positive_{inter}"] = True
+            sym_data[f"candle_positive_times_{inter}"] = str(is_candle_positive['Open time'].values.tolist())
+        else:
+            sym_data[f"is_candle_positive_{inter}"] = False
+            sym_data[f"candle_positive_times_{inter}"] = "[]"
+        #endregion
+
         #region rsi and stoch rsi
         if self.first_interval['get_rsi']:
             sym_data[f'latest_rsi_{inter}'] = latest_sample[f'rsi_{inter}']
@@ -552,6 +565,17 @@ class kucoin_fetch_promising(threading.Thread):
                 sym_data[f"is_stochrsi_low_{inter}"] = False
                 sym_data[f"stochrsi_low_times_{inter}"] = "[]"
 
+            # find stoch rsi high
+            is_stochrsi_high = indicator[(indicator[f'stochastic_rsi_k_{inter}'] > 20)]
+            is_stochrsi_high = is_stochrsi_high[(is_stochrsi_high['Open time'] >= how_much_ago)]
+            is_stochrsi_high['Open time'] = is_stochrsi_high['Open time'].astype(str)
+            if not is_stochrsi_high.empty:
+                sym_data[f"is_stochrsi_high_{inter}"] = True
+                sym_data[f"stochrsi_high_times_{inter}"] = str(is_stochrsi_high['Open time'].values.tolist())
+            else:
+                sym_data[f"is_stochrsi_high_{inter}"] = False
+                sym_data[f"stochrsi_high_times_{inter}"] = "[]"
+
             # find stoch rsi not too high
             is_stochrsi_not_too_high = indicator[(indicator[f'stochastic_rsi_k_{inter}'] < 80)]
             is_stochrsi_not_too_high = is_stochrsi_not_too_high[(is_stochrsi_not_too_high['Open time'] >= how_much_ago)]
@@ -564,7 +588,7 @@ class kucoin_fetch_promising(threading.Thread):
                 sym_data[f"stochrsi_not_too_high_times_{inter}"] = "[]"
 
             # find stoch rsi uptrend
-            is_stochrsi_uptrend = indicator[(indicator[f'slope_stochastic_rsi_k_{inter}'] < -5)]
+            is_stochrsi_uptrend = indicator[(indicator[f'slope_stochastic_rsi_k_{inter}'] < -3)]
             is_stochrsi_uptrend = is_stochrsi_uptrend[(is_stochrsi_uptrend['Open time'] >= how_much_ago)]
             is_stochrsi_uptrend['Open time'] = is_stochrsi_uptrend['Open time'].astype(str)
             if not is_stochrsi_uptrend.empty:

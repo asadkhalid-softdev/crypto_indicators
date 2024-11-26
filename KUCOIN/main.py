@@ -53,12 +53,15 @@ def get_indicator_cryptos(type="long-term", when_last=None, enable=['1week', '1d
 
                 data = data[data[f'is_stochrsi_uptrend_{timeframe}']==True]
                 data = data[data[f'stochrsi_uptrend_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
+                data = data[data[f'is_stochrsi_high_{timeframe}']==True]
+                data = data[data[f'stochrsi_high_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
                 
                 logging.info(f"For interval {timeframe}, got {len(data)} symbols.")
             
             timeframe = '1day'
             if timeframe in enable:
-                data = data[data[f'latest_candle_diff_{timeframe}'] > 0.5]
+                # data = data[data[f'latest_candle_diff_{timeframe}'] > 0]
 
                 # data = data.sort_values(f'latest_stoch_rsi_{timeframe}', ascending=True)
                 data = data.sort_values(f'latest_volume_{timeframe}', ascending=False)
@@ -67,11 +70,17 @@ def get_indicator_cryptos(type="long-term", when_last=None, enable=['1week', '1d
                 # data[f'latest_scoring_{timeframe}'] = data.apply(lambda x: x[f'latest_volume_{timeframe}']/x[f'latest_candle_diff_{timeframe}'], axis=1)
                 # data = data.sort_values(f'latest_scoring_{timeframe}', ascending=False)
 
-                data = data[data[f'is_stochrsi_not_too_high_{timeframe}']==True]
-                data = data[data[f'stochrsi_not_too_high_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+                data = data[data[f'is_candle_positive_{timeframe}']==True]
+                data = data[data[f'candle_positive_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
 
                 data = data[data[f'is_stochrsi_uptrend_{timeframe}']==True]
                 data = data[data[f'stochrsi_uptrend_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
+                data = data[data[f'is_stochrsi_high_{timeframe}']==True]
+                data = data[data[f'stochrsi_high_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
+                data = data[data[f'is_stochrsi_not_too_high_{timeframe}']==True]
+                data = data[data[f'stochrsi_not_too_high_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
 
                 logging.info(f"For interval {timeframe}, got remaining {len(data)} symbols.")
 
@@ -83,11 +92,19 @@ def get_indicator_cryptos(type="long-term", when_last=None, enable=['1week', '1d
 
             timeframe = '1hour'
             if timeframe in enable:
+                # data = data[(data[f'latest_slope_stoch_rsi_{timeframe}'] < -1)] 
+
                 data = data[data[f'is_stochrsi_uptrend_{timeframe}']==True]
                 data = data[data[f'stochrsi_uptrend_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
 
+                data = data[data[f'is_stochrsi_not_too_high_{timeframe}']==True]
+                data = data[data[f'stochrsi_not_too_high_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
+                # data = data[data[f'is_stochrsi_uptrend_{timeframe}']==True]
+                # data = data[data[f'stochrsi_uptrend_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
                 logging.info(f"For interval {timeframe}, got remaining {len(data)} symbols.")
-        
+
         return data[['symbol']]
     except Exception as e:
         logging.error(e, exc_info=True)
