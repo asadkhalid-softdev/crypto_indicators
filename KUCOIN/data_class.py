@@ -588,7 +588,7 @@ class kucoin_fetch_promising(threading.Thread):
                 sym_data[f"stochrsi_not_too_high_times_{inter}"] = "[]"
 
             # find stoch rsi uptrend
-            is_stochrsi_uptrend = indicator[(indicator[f'slope_stochastic_rsi_k_{inter}'] < -3)]
+            is_stochrsi_uptrend = indicator[(indicator[f'slope_stochastic_rsi_k_{inter}'] <=0)]
             is_stochrsi_uptrend = is_stochrsi_uptrend[(is_stochrsi_uptrend['Open time'] >= how_much_ago)]
             is_stochrsi_uptrend['Open time'] = is_stochrsi_uptrend['Open time'].astype(str)
             if not is_stochrsi_uptrend.empty:
