@@ -25,7 +25,7 @@ def check_date_in_list(date_list, target_date_obj):
     return any(datetime.strptime(dt, "%Y-%m-%d %H:%M:%S") == target_date_obj for dt in date_list)
 
 #region FLASK API
-def get_indicator_cryptos(type="long-term", when_last=None, enable=['1week', '1day']):
+def get_indicator_cryptos(type="long-term", when_last=None, enable=['1week', '1day'], sort_by="volume", sort_interval='1day'):
     try:
 
         data = params['thread_fetchie'].indicator_info
@@ -54,22 +54,26 @@ def get_indicator_cryptos(type="long-term", when_last=None, enable=['1week', '1d
                 data = data[data[f'is_stochrsi_uptrend_{timeframe}']==True]
                 data = data[data[f'stochrsi_uptrend_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
 
+                data = data[data[f'is_stochrsi_slope_downwards_{timeframe}']==True]
+                data = data[data[f'stochrsi_slope_downwards_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
                 data = data[data[f'is_stochrsi_high_{timeframe}']==True]
                 data = data[data[f'stochrsi_high_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
-                
+
+                if sort_interval == timeframe:
+                    if sort_by == "volume":
+                        data = data.sort_values(f'latest_volume_{timeframe}', ascending=False)
+                    elif sort_by == "stochrsi":
+                        data = data.sort_values(f'latest_stoch_rsi_{timeframe}', ascending=True)
+                    elif sort_by == "candle":
+                        data = data.sort_values(f'latest_candle_diff_{timeframe}', ascending=False)
+
+                to_send = data[['symbol',f'latest_volume_{timeframe}',f'latest_candle_diff_{timeframe}']]
                 logging.info(f"For interval {timeframe}, got {len(data)} symbols.")
             
             timeframe = '1day'
             if timeframe in enable:
-                # data = data[data[f'latest_candle_diff_{timeframe}'] > 0]
-
-                # data = data.sort_values(f'latest_stoch_rsi_{timeframe}', ascending=True)
-                data = data.sort_values(f'latest_volume_{timeframe}', ascending=False)
-                # data = data.sort_values(f'latest_candle_diff_{timeframe}', ascending=True)
-
-                # data[f'latest_scoring_{timeframe}'] = data.apply(lambda x: x[f'latest_volume_{timeframe}']/x[f'latest_candle_diff_{timeframe}'], axis=1)
-                # data = data.sort_values(f'latest_scoring_{timeframe}', ascending=False)
-
+                    
                 data = data[data[f'is_candle_positive_{timeframe}']==True]
                 data = data[data[f'candle_positive_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
 
@@ -82,6 +86,15 @@ def get_indicator_cryptos(type="long-term", when_last=None, enable=['1week', '1d
                 data = data[data[f'is_stochrsi_not_too_high_{timeframe}']==True]
                 data = data[data[f'stochrsi_not_too_high_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
 
+                if sort_interval == timeframe:
+                    if sort_by == "volume":
+                        data = data.sort_values(f'latest_volume_{timeframe}', ascending=False)
+                    elif sort_by == "stochrsi":
+                        data = data.sort_values(f'latest_stoch_rsi_{timeframe}', ascending=True)
+                    elif sort_by == "candle":
+                        data = data.sort_values(f'latest_candle_diff_{timeframe}', ascending=False)
+
+                to_send = data[['symbol',f'latest_volume_{timeframe}',f'latest_candle_diff_{timeframe}']]
                 logging.info(f"For interval {timeframe}, got remaining {len(data)} symbols.")
 
             if when_last!=None:
@@ -92,20 +105,121 @@ def get_indicator_cryptos(type="long-term", when_last=None, enable=['1week', '1d
 
             timeframe = '1hour'
             if timeframe in enable:
-                # data = data[(data[f'latest_slope_stoch_rsi_{timeframe}'] < -1)] 
 
                 data = data[data[f'is_stochrsi_uptrend_{timeframe}']==True]
                 data = data[data[f'stochrsi_uptrend_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
 
+                data = data[data[f'is_stochrsi_high_{timeframe}']==True]
+                data = data[data[f'stochrsi_high_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
+                # data = data[data[f'is_stochrsi_not_too_high_{timeframe}']==True]
+                # data = data[data[f'stochrsi_not_too_high_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
+                if sort_interval == timeframe:
+                    if sort_by == "volume":
+                        data = data.sort_values(f'latest_volume_{timeframe}', ascending=False)
+                    elif sort_by == "stochrsi":
+                        data = data.sort_values(f'latest_stoch_rsi_{timeframe}', ascending=True)
+                    elif sort_by == "candle":
+                        data = data.sort_values(f'latest_candle_diff_{timeframe}', ascending=False)
+
+                to_send = data[['symbol',f'latest_volume_{timeframe}',f'latest_candle_diff_{timeframe}']]
+                logging.info(f"For interval {timeframe}, got remaining {len(data)} symbols.")
+        elif type=="long-term-low":
+
+            if when_last!=None:
+                target_date_obj = datetime.strptime(when_last, "%Y-%m-%d %H:%M:%S")
+            else:
+                target_date_obj = datetime.now()
+                target_date_obj = target_date_obj.replace(hour=0, minute=0, second=0, microsecond=0)
+
+            logging.info(f"Target date: {target_date_obj}")
+
+            timeframe = '1week'
+            if timeframe in enable:
+
+                data = data[data[f'is_macd_histogram_pct_uptrend_{timeframe}']==True]
+                data = data[data[f'macd_histogram_pct_uptrend_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
+                data = data[data[f'is_stochrsi_uptrend_{timeframe}']==True]
+                data = data[data[f'stochrsi_uptrend_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
+                data = data[data[f'is_stochrsi_slope_downwards_{timeframe}']==True]
+                data = data[data[f'stochrsi_slope_downwards_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
+                data = data[data[f'is_stochrsi_low_{timeframe}']==True]
+                data = data[data[f'stochrsi_low_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
+                # data = data[data[f'is_stochrsi_high_{timeframe}']==True]
+                # data = data[data[f'stochrsi_high_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
+                if sort_interval == timeframe:
+                    if sort_by == "volume":
+                        data = data.sort_values(f'latest_volume_{timeframe}', ascending=False)
+                    elif sort_by == "stochrsi":
+                        data = data.sort_values(f'latest_stoch_rsi_{timeframe}', ascending=True)
+                    elif sort_by == "candle":
+                        data = data.sort_values(f'latest_candle_diff_{timeframe}', ascending=False)
+
+                to_send = data[['symbol',f'latest_volume_{timeframe}',f'latest_candle_diff_{timeframe}']]
+                logging.info(f"For interval {timeframe}, got {len(data)} symbols.")
+            
+            timeframe = '1day'
+            if timeframe in enable:
+                    
+                data = data[data[f'is_candle_positive_{timeframe}']==True]
+                data = data[data[f'candle_positive_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
+                data = data[data[f'is_stochrsi_uptrend_{timeframe}']==True]
+                data = data[data[f'stochrsi_uptrend_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
+                data = data[data[f'is_stochrsi_high_{timeframe}']==True]
+                data = data[data[f'stochrsi_high_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
                 data = data[data[f'is_stochrsi_not_too_high_{timeframe}']==True]
                 data = data[data[f'stochrsi_not_too_high_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
 
-                # data = data[data[f'is_stochrsi_uptrend_{timeframe}']==True]
-                # data = data[data[f'stochrsi_uptrend_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+                if sort_interval == timeframe:
+                    if sort_by == "volume":
+                        data = data.sort_values(f'latest_volume_{timeframe}', ascending=False)
+                    elif sort_by == "stochrsi":
+                        data = data.sort_values(f'latest_stoch_rsi_{timeframe}', ascending=True)
+                    elif sort_by == "candle":
+                        data = data.sort_values(f'latest_candle_diff_{timeframe}', ascending=False)
 
+                to_send = data[['symbol',f'latest_volume_{timeframe}',f'latest_candle_diff_{timeframe}']]
                 logging.info(f"For interval {timeframe}, got remaining {len(data)} symbols.")
 
-        return data[['symbol']]
+            if when_last!=None:
+                target_date_obj = datetime.strptime(when_last, "%Y-%m-%d %H:%M:%S")
+            else:
+                target_date_obj = datetime.now()
+                target_date_obj = target_date_obj.replace(minute=0, second=0, microsecond=0)
+
+            timeframe = '1hour'
+            if timeframe in enable:
+
+                data = data[data[f'is_stochrsi_uptrend_{timeframe}']==True]
+                data = data[data[f'stochrsi_uptrend_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
+                data = data[data[f'is_stochrsi_high_{timeframe}']==True]
+                data = data[data[f'stochrsi_high_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
+                data = data[data[f'is_stochrsi_not_too_high_{timeframe}']==True]
+                data = data[data[f'stochrsi_not_too_high_times_{timeframe}'].apply(check_date_in_list, args=(target_date_obj,))]
+
+                if sort_interval == timeframe:
+                    if sort_by == "volume":
+                        data = data.sort_values(f'latest_volume_{timeframe}', ascending=False)
+                    elif sort_by == "stochrsi":
+                        data = data.sort_values(f'latest_stoch_rsi_{timeframe}', ascending=True)
+                    elif sort_by == "candle":
+                        data = data.sort_values(f'latest_candle_diff_{timeframe}', ascending=False)
+
+                to_send = data[['symbol',f'latest_volume_{timeframe}',f'latest_candle_diff_{timeframe}']]
+                logging.info(f"For interval {timeframe}, got remaining {len(data)} symbols.")
+
+        return to_send.round(2)
     except Exception as e:
         logging.error(e, exc_info=True)
         return pd.DataFrame()
@@ -157,19 +271,21 @@ def get_magic():
         timeframes_enable = request.args.get('timeframes_enable','1week,1day,4hour')
         timeframes_enable = timeframes_enable.split(',')
         when_last = request.args.get('when_last', None)
+        sort_by = request.args.get('sort_by', "volume")
+        sort_interval = request.args.get('sort_interval', "1day")
 
-        data = get_indicator_cryptos(type=type, when_last=when_last, enable=timeframes_enable)
+        data = get_indicator_cryptos(type=type, when_last=when_last, enable=timeframes_enable, sort_by=sort_by, sort_interval=sort_interval)
 
-        data = data['symbol'].values.tolist()
+        symbols = data['symbol'].values.tolist()
+        data = data.values.tolist()
 
         x_com_string = ""
-        for i in data:
+        for i in symbols:
             x_com_string += f"${i.split('-')[0]} OR "
         x_com_string = f"{x_com_string[:-4]} min_replies:5 min_retweets:10"
 
         response = jsonify({'status': params['thread_fetchie'].fetcher_status,'n_symbols': len(data),'list': data, 'x_com_string':x_com_string})
         return make_response(response, 200)
-    
     except Exception as e:
         logging.error(e, exc_info=True)
         response = jsonify({'status': params['thread_fetchie'].fetcher_status, 'message': str(e)})

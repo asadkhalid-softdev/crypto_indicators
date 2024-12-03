@@ -530,7 +530,7 @@ class kucoin_fetch_promising(threading.Thread):
 
     def indicator_list(self, sym_data, indicator, inter, how_much_ago):
         
-        latest_sample = indicator.head(1).to_dict('records')[0]
+        latest_sample = indicator.tail(1).to_dict('records')[0]
 
         sym_data[f'latest_volume_{inter}'] = latest_sample[f'Volume_{inter}']
         sym_data[f'latest_candle_diff_{inter}'] = latest_sample[f'candle_diff_{inter}']
@@ -566,7 +566,7 @@ class kucoin_fetch_promising(threading.Thread):
                 sym_data[f"stochrsi_low_times_{inter}"] = "[]"
 
             # find stoch rsi high
-            is_stochrsi_high = indicator[(indicator[f'stochastic_rsi_k_{inter}'] > 20)]
+            is_stochrsi_high = indicator[(indicator[f'stochastic_rsi_k_{inter}'] > 30)]
             is_stochrsi_high = is_stochrsi_high[(is_stochrsi_high['Open time'] >= how_much_ago)]
             is_stochrsi_high['Open time'] = is_stochrsi_high['Open time'].astype(str)
             if not is_stochrsi_high.empty:
@@ -576,8 +576,19 @@ class kucoin_fetch_promising(threading.Thread):
                 sym_data[f"is_stochrsi_high_{inter}"] = False
                 sym_data[f"stochrsi_high_times_{inter}"] = "[]"
 
+            # find stoch rsi low
+            is_stochrsi_low = indicator[(indicator[f'stochastic_rsi_k_{inter}'] < 30)]
+            is_stochrsi_low = is_stochrsi_low[(is_stochrsi_low['Open time'] >= how_much_ago)]
+            is_stochrsi_low['Open time'] = is_stochrsi_low['Open time'].astype(str)
+            if not is_stochrsi_low.empty:
+                sym_data[f"is_stochrsi_low_{inter}"] = True
+                sym_data[f"stochrsi_low_times_{inter}"] = str(is_stochrsi_low['Open time'].values.tolist())
+            else:
+                sym_data[f"is_stochrsi_low_{inter}"] = False
+                sym_data[f"stochrsi_low_times_{inter}"] = "[]"
+
             # find stoch rsi not too high
-            is_stochrsi_not_too_high = indicator[(indicator[f'stochastic_rsi_k_{inter}'] < 80)]
+            is_stochrsi_not_too_high = indicator[(indicator[f'stochastic_rsi_k_{inter}'] < 100)]
             is_stochrsi_not_too_high = is_stochrsi_not_too_high[(is_stochrsi_not_too_high['Open time'] >= how_much_ago)]
             is_stochrsi_not_too_high['Open time'] = is_stochrsi_not_too_high['Open time'].astype(str)
             if not is_stochrsi_not_too_high.empty:
@@ -588,7 +599,7 @@ class kucoin_fetch_promising(threading.Thread):
                 sym_data[f"stochrsi_not_too_high_times_{inter}"] = "[]"
 
             # find stoch rsi uptrend
-            is_stochrsi_uptrend = indicator[(indicator[f'slope_stochastic_rsi_k_{inter}'] <=0)]
+            is_stochrsi_uptrend = indicator[(indicator[f'slope_stochastic_rsi_k_{inter}'] <= 0)]
             is_stochrsi_uptrend = is_stochrsi_uptrend[(is_stochrsi_uptrend['Open time'] >= how_much_ago)]
             is_stochrsi_uptrend['Open time'] = is_stochrsi_uptrend['Open time'].astype(str)
             if not is_stochrsi_uptrend.empty:
@@ -597,6 +608,17 @@ class kucoin_fetch_promising(threading.Thread):
             else:
                 sym_data[f"is_stochrsi_uptrend_{inter}"] = False
                 sym_data[f"stochrsi_uptrend_times_{inter}"] = "[]"
+
+            # find stoch rsi direction
+            is_stochrsi_slope_downwards = indicator[indicator[f'stochrsi_direction_{inter}']==True]
+            is_stochrsi_slope_downwards = is_stochrsi_slope_downwards[(is_stochrsi_slope_downwards['Open time'] >= how_much_ago)]
+            is_stochrsi_slope_downwards['Open time'] = is_stochrsi_slope_downwards['Open time'].astype(str)
+            if not is_stochrsi_slope_downwards.empty:
+                sym_data[f"is_stochrsi_slope_downwards_{inter}"] = True
+                sym_data[f"stochrsi_slope_downwards_times_{inter}"] = str(is_stochrsi_slope_downwards['Open time'].values.tolist())
+            else:
+                sym_data[f"is_stochrsi_slope_downwards_{inter}"] = False
+                sym_data[f"stochrsi_slope_downwards_times_{inter}"] = "[]"
         #endregion
 
         #region macd
@@ -897,7 +919,7 @@ class kucoin_data(threading.Thread):
                 if feature in exclude_features:
                     continue
 
-                window_offsets = [3, 0]
+                window_offsets = [2, 0]
 
                 window = window_offsets[0] 
                 offset = window_offsets[1] 
@@ -945,11 +967,19 @@ class kucoin_data(threading.Thread):
             df_klines['Close time'] = df_klines['Close time'].dt.strftime('%Y-%m-%d %H:%M:%S')
             df_klines = df_klines.sort_values("Open time", ascending=True)
 
+            if interval=="1day":
+                date_format = "%Y-%m-%d %H:%M:%S"
+                date1 = datetime.strptime(df_klines['Open time'].head(1).values.tolist()[0], date_format)
+                date2 = datetime.strptime(df_klines['Open time'].tail(1).values.tolist()[0], date_format)
+                difference = (date2 - date1).days
+
+                self.max_duration_days = min([self.max_duration_days, difference])
+
             # store dataframe
             self.kline_configs[interval]['df_kline'] = df_klines
 
-            self.kline_configs[interval]['df_candle_info'] = df_klines[['Open time', 'Open', 'Close']]
-            self.kline_configs[interval]['df_candle_info'].rename(columns={'Open': f'Open_{interval}', 'Close': f'Close_{interval}'}, inplace=True)
+            self.kline_configs[interval]['df_candle_info'] = df_klines[['Open time', 'Open', 'Close', 'High', 'Low']]
+            self.kline_configs[interval]['df_candle_info'].rename(columns={'Open': f'Open_{interval}', 'Close': f'Close_{interval}', 'High': f'High_{interval}', 'Low': f'Low_{interval}'}, inplace=True)
             self.kline_configs[interval]['df_candle_info'][f'candle_diff_{interval}'] = self.kline_configs[interval]['df_candle_info'].apply(lambda x: 100*(x[f'Close_{interval}']-x[f'Open_{interval}'])/(x[f'Close_{interval}']), axis=1)
 
             if configs['get_volume']:
@@ -966,10 +996,10 @@ class kucoin_data(threading.Thread):
                 df_rsi = self.get_rsi(df_klines, interval=interval)
                 self.kline_configs[interval]['df_rsi'] = df_rsi[['Open time', 
                                                                 f'rsi_{interval}', 
-                                                                f'stochastic_rsi_k_{interval}',
-                                                                f'rsi_change_intensity_{interval}',
+                                                                f'stochastic_rsi_k_{interval}'
                                                                 ]]
                 self.kline_configs[interval]['df_rsi'] = self.get_trend(self.kline_configs[interval]['df_rsi'])
+                self.kline_configs[interval]['df_rsi'][f'stochrsi_direction_{interval}'] =  self.kline_configs[interval]['df_rsi'][f'slope_stochastic_rsi_k_{interval}'].shift(1) >= self.kline_configs[interval]['df_rsi'][f'slope_stochastic_rsi_k_{interval}']
 
             if configs['get_bollinger']:
                 df_bollinger = self.get_bollinger(df_klines, interval=interval)
@@ -1033,28 +1063,29 @@ class kucoin_data(threading.Thread):
 
     def get_rsi(self, df, lengthrsi=14, lengthStoch=14, k_period=3, d_period=3, interval='1h'):
 
-        def rsi_calc(df, timeperiod):
-            delta = df.diff()
+        def calculate_rsi_with_smma(data, interval):
+            delta = data.diff()
+            gain = delta.where(delta > 0, 0)  # Positive changes (gains)
+            loss = -delta.where(delta < 0, 0)  # Negative changes (losses)
 
-            # Separate the gains and losses
-            gain = delta.where(delta > 0, 0)
-            loss = -delta.where(delta < 0, 0)
+            # Initialize SMMA for gain and loss
+            smma_gain = gain.rolling(window=interval, min_periods=1).mean()  # Use SMA for the first value
+            smma_loss = loss.rolling(window=interval, min_periods=1).mean()
 
-            # Calculate the average gains and losses
-            avg_gain = gain.rolling(window=timeperiod, min_periods=1).mean()
-            avg_loss = loss.rolling(window=timeperiod, min_periods=1).mean()
+            # Replace SMA with SMMA after the first value
+            for i in range(interval, len(data)):
+                smma_gain.iloc[i] = (smma_gain.iloc[i - 1] * (interval - 1) + gain.iloc[i]) / interval
+                smma_loss.iloc[i] = (smma_loss.iloc[i - 1] * (interval - 1) + loss.iloc[i]) / interval
 
-            # Compute the relative strength (RS)
-            rs = avg_gain / avg_loss
-
-            # Calculate the RSI
+            # Compute RS and RSI
+            rs = smma_gain / smma_loss
             rsi = 100 - (100 / (1 + rs))
 
             return rsi
         
         # Calculate the rsi
-        df[f'rsi_{interval}'] = rsi_calc(df['Close'], timeperiod=lengthrsi)
-        df[f'rsi_change_intensity_{interval}'] = abs(df[f'rsi_{interval}'].pct_change() * 100)
+        # df[f'rsi_{interval}'] = talib.RSI(df['Close'], timeperiod=lengthrsi)
+        df[f'rsi_{interval}'] = calculate_rsi_with_smma(df['Close'], interval=lengthrsi)
 
         lowestlow = df[f'rsi_{interval}'].rolling(window=lengthStoch, min_periods=1, center=False).min()
         highesthigh = df[f'rsi_{interval}'].rolling(window=lengthStoch, min_periods=1, center=False).max()
@@ -1063,6 +1094,7 @@ class kucoin_data(threading.Thread):
 
         # Adding columns to the dataframe
         df[f'stochastic_rsi_k_{interval}'] = stoch_rsi_k
+        
         df[f'stochastic_rsi_d_{interval}'] = stoch_rsi_d
 
         return df
@@ -1160,6 +1192,7 @@ class kucoin_data(threading.Thread):
 
     def generate_indicator(self, delay=0):
         try:
+            
             #~~~~~~~~~ Merge to combine stocks columns and fill NaNs
             dataframes = []
             for key, value in self.kline_configs.items():
@@ -1199,16 +1232,48 @@ class kucoin_data(threading.Thread):
                 now = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             else:
                 now = datetime.now().replace(minute=0, second=0, microsecond=0)
+
             days_ago = now - timedelta(days=self.max_duration_days)
             time_range = pd.date_range(start=days_ago, end=now, freq=self.timeframe_result)
             time_range = time_range.strftime('%Y-%m-%d %H:%M:%S')
             df_time = pd.DataFrame(time_range, columns=['Open time'])
-            df_time = df_time.sort_values('Open time', ascending=False)
+            # df_time = df_time.sort_values('Open time', ascending=False)
             df_time['Open time'] = df_time['Open time'].astype(str)
             dataframes.insert(0, df_time)
-
+ 
             self.combined_indicators = reduce(lambda left, right: pd.merge(left, right, on='Open time', how='left'), dataframes)
+
+            #region manipulate data
+            self.combined_indicators = self.combined_indicators.interpolate(method='linear', limit_area='inside')
+
+            def fill_ending_nans_with_slope(df, column):
+                values = df[column].values
+                n = len(values)
+                
+                # Find the last two non-NaN indices
+                non_nan_indices = np.where(~np.isnan(values))[0]
+                if len(non_nan_indices) < 2:
+                    return df  # Not enough data to compute slope
+                
+                last_index = non_nan_indices[-1]
+                second_last_index = non_nan_indices[-2]
+                
+                # Calculate slope
+                slope = (values[last_index] - values[second_last_index]) / (last_index - second_last_index)
+                
+                # Fill the trailing NaNs using the slope
+                for i in range(last_index + 1, n):
+                    values[i] = values[i - 1] + slope
+                
+                df[column] = values
+                return df
+            
+            for col in self.combined_indicators.select_dtypes(exclude=['object','boolean']).columns:
+                if 'slope' in col:
+                    self.combined_indicators = fill_ending_nans_with_slope(self.combined_indicators, col)
+
             self.combined_indicators = self.combined_indicators.ffill().bfill()
+            #endregion
 
             if delay>0:
                 time.sleep(delay)
